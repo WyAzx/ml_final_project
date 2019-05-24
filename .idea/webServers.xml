@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="09a34527-01c7-49f0-8a7c-a1add604a9d0" name="bert" url="http://10.84.180.203">
+        <fileTransfer host="10.84.180.203" port="8022" rootFolder="/nfs/project/wangyun/jigsaw" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="8022" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

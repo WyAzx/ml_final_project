@@ -1,0 +1,4 @@
+{
+  "BERT_DIR": "bert_models/cased_L-12_H-768_A-12",
+  "DATA_DIR": "/nfs/project/wangyun/jigsaw/data"
+}
