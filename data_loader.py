@@ -30,7 +30,7 @@ def tokenize_example(example, tokenizer, max_len):
 
 def truncate_ids(text_ids, max_len):
     if len(text_ids) > max_len:
-        new_text_ids = text_ids[: max_len-1] + text_ids[-1]
+        new_text_ids = text_ids[: max_len-1] + [text_ids[-1]]
         return new_text_ids
     return text_ids
 
@@ -102,7 +102,7 @@ class AllDataGenerator(object):
                 Y_aux.append(self.y_aux[i])
                 EW.append(self.example_weight[i])
                 if len(X) == self.batch_size or i == idxs[-1]:
-                    X = seq_padding(X)
+                    X = seq_padding(X, self.max_len)
                     X = np.array(X)
                     Y = np.array(Y)
                     Y_aux = np.array(Y_aux)
@@ -110,3 +110,29 @@ class AllDataGenerator(object):
                     segment = np.zeros_like(X)
                     yield [X, segment], [Y, Y_aux], [EW, np.ones_like(EW)]
                     X, Y, Y_aux, EW = [], [], [], []
+
+
+class PredictDataGenerator(object):
+    def __init__(self, text, batch_size=32, max_len=512):
+        # self.x = tokenize_examples(x, tokenizer, max_len)
+        self.text = text
+        self.batch_size = batch_size
+        self.steps = len(self.text) // self.batch_size
+        self.max_len = max_len
+        if len(self.text) % self.batch_size != 0:
+            self.steps += 1
+
+    def __len__(self):
+        return self.steps
+
+    def __iter__(self):
+        while True:
+            X = []
+            for i in range(len(self.text)):
+                X.append(self.text[i])
+                if len(X) == self.batch_size or i == len(self.text) - 1:
+                    X = seq_padding(X, self.max_len)
+                    X = np.array(X)
+                    segment = np.zeros_like(X)
+                    yield [X, segment]
+                    X = []

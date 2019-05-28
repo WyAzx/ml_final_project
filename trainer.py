@@ -28,8 +28,6 @@ IDENTITY_COLUMNS = [
 AUX_COLUMNS = ['target', 'severe_toxicity', 'obscene', 'identity_attack', 'insult', 'threat']
 
 
-
-
 def train_ml_all_set():
     train_config = get_config()
     bert_config = get_bert_config(train_config)
