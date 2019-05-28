@@ -18,7 +18,7 @@ class Logger(Callback):
         super().__init__()
 
     def on_epoch_end(self, epoch, log=None):
-        cv_pred = self.train_model.predict([self.val_text, np.zeros_like(self.val_text)], batch_size=1024)
+        cv_pred = self.train_model.predict([self.val_text, np.zeros_like(self.val_text)], batch_size=64)
         cv_true = self.val_label
         auc_val = roc_auc_score(cv_true, cv_pred)
         if self.auc < auc_val:

@@ -10,6 +10,14 @@
           <option name="port" value="8022" />
         </fileTransfer>
       </webServer>
+      <webServer id="9d71886e-02f5-4ab5-9dbd-a8587e0a02e7" name="newluban" url="http://10.84.169.62">
+        <fileTransfer host="10.84.169.62" port="8022" rootFolder="/nfs/cold_project/wangyun" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="8022" />
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

@@ -22,12 +22,12 @@ def get_embedding(inputs, token_num, pos_num, embed_dim, dropout_rate=0.1, train
 
     See: https://arxiv.org/pdf/1810.04805.pdf
 
-    :param inputs: Input keras_layers.
+    :param inputs: Input layers.
     :param token_num: Number of tokens.
     :param pos_num: Maximum position.
-    :param embed_dim: The dimension of all embedding keras_layers.
+    :param embed_dim: The dimension of all embedding layers.
     :param dropout_rate: Dropout rate.
-    :param trainable: Whether the keras_layers are trainable.
+    :param trainable: Whether the layers are trainable.
     :return: The merged embedding layer and weights of token embedding.
     """
     embeddings = [

@@ -2,7 +2,7 @@ from keras_bert.backend import keras
 
 
 def get_inputs(seq_len):
-    """Get input keras_layers.
+    """Get input layers.
 
     See: https://arxiv.org/pdf/1810.04805.pdf
 

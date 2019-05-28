@@ -41,16 +41,14 @@ def get_model(token_num,
               dropout_rate=0.1,
               weight_decay=0.01,
               attention_activation=None,
-              feed_forward_activation=gelu,
+              feed_forward_activation='gelu',
               custom_layers=None,
               training=True,
               trainable=None,
               output_layer_num=1,
               decay_steps=100000,
               warmup_steps=10000,
-              lr=1e-4,
-              trainable_list=None,
-              output_layers_list=None):
+              lr=1e-4):
     """Get BERT model.
 
     See: https://arxiv.org/pdf/1810.04805.pdf
@@ -64,21 +62,25 @@ def get_model(token_num,
     :param feed_forward_dim: Dimension of the feed forward layer in each transformer.
     :param dropout_rate: Dropout rate.
     :param weight_decay: Weight decay rate.
-    :param attention_activation: Activation for attention keras_layers.
-    :param feed_forward_activation: Activation for feed-forward keras_layers.
+    :param attention_activation: Activation for attention layers.
+    :param feed_forward_activation: Activation for feed-forward layers.
     :param custom_layers: A function that takes the embedding tensor and returns the tensor after feature extraction.
                           Arguments such as `transformer_num` and `head_num` will be ignored if `custom_layer` is not
                           `None`.
-    :param training: The built model will be returned if it is `True`, otherwise the input keras_layers and the last feature
+    :param training: The built model will be returned if it is `True`, otherwise the input layers and the last feature
                      extraction layer will be returned.
     :param trainable: Whether the model is trainable.
-    :param output_layer_num: The number of keras_layers whose outputs will be concatenated as a single output.
+    :param output_layer_num: The number of layers whose outputs will be concatenated as a single output.
                              Only available when `training` is `False`.
     :param decay_steps: Learning rate will decay linearly to zero in decay steps.
     :param warmup_steps: Learning rate will increase linearly to lr in first warmup steps.
     :param lr: Learning rate.
     :return: The compiled model.
     """
+    if attention_activation == 'gelu':
+        attention_activation = gelu
+    if feed_forward_activation == 'gelu':
+        feed_forward_activation = gelu
     if trainable is None:
         trainable = training
     inputs = get_inputs(seq_len=seq_len)
@@ -106,7 +108,6 @@ def get_model(token_num,
             feed_forward_activation=feed_forward_activation,
             dropout_rate=dropout_rate,
             trainable=trainable,
-            trainable_list=trainable_list
         )
     if not training:
         if output_layer_num > 1:
@@ -147,7 +148,8 @@ def get_model(token_num,
             decay_steps=decay_steps,
             warmup_steps=warmup_steps,
             lr=lr,
-            kernel_weight_decay=weight_decay,
+            weight_decay=weight_decay,
+            weight_decay_pattern=['embeddings', 'kernel', 'W1', 'W2', 'Wk', 'Wq', 'Wv', 'Wo'],
         ),
         loss=keras.losses.sparse_categorical_crossentropy,
     )
