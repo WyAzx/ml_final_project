@@ -85,7 +85,7 @@ RE_PATTERNS = {
             'hitler'
         ],
 
-    ' fuck':
+    ' fuck ':
         [
             '(f)(u|[^a-z0-9 ])(c|[^a-z0-9 ])(k|[^a-z0-9 ])([^ ])*',
             '(f)([^a-z]*)(u)([^a-z]*)(c)([^a-z]*)(k)',
@@ -245,8 +245,10 @@ RE_PATTERNS = {
 
 
 class PatternTokenizer(BaseTokenizer):
-    def __init__(self, lower=True, initial_filters=r"[^a-z0-9!@#\$%\^\&\*_\-,\.' ]", patterns=RE_PATTERNS,
+    def __init__(self, lower=True, initial_filters=r"[^a-z0-9!@#\$%\^\&\*_\-,\.' ]", patterns=None,
                  remove_repetitions=True):
+        if patterns is None:
+            patterns = RE_PATTERNS
         self.lower = lower
         self.patterns = patterns
         self.initial_filters = initial_filters
@@ -302,14 +304,14 @@ class PatternTokenizer(BaseTokenizer):
 
 
 def main():
-    train = pd.read_csv("train.csv")
-    test = pd.read_csv("test.csv")
+    train = pd.read_csv("data/train.csv")
+    # test = pd.read_csv("data/test.csv")
 
-    tokenizer = PatternTokenizer()
+    tokenizer = PatternTokenizer(lower=False)
     train["comment_text"] = tokenizer.process_ds(train["comment_text"]).str.join(sep=" ")
-    test["comment_text"] = tokenizer.process_ds(test["comment_text"]).str.join(sep=" ")
-    train.to_csv("train_preprocessed.csv", index=False)
-    test.to_csv("test_preprocessed.csv", index=False)
+    # test["comment_text"] = tokenizer.process_ds(test["comment_text"]).str.join(sep=" ")
+    train.to_csv("processed_data/train.csv", index=False)
+    # test.to_csv("test_preprocessed.csv", index=False)
 
 
 if __name__ == "__main__":

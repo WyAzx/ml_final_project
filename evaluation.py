@@ -3,9 +3,13 @@ import numpy as np
 import pandas as pd
 
 TOXICITY_COLUMN = 'target'
-
+IDENTITY_COLUMNS = [
+    'male', 'female', 'homosexual_gay_or_lesbian', 'christian', 'jewish',
+    'muslim', 'black', 'white', 'psychiatric_or_mental_illness'
+]
 
 # From baseline kernel
+
 
 def calculate_overall_auc(df, model_name):
     true_labels = df[TOXICITY_COLUMN] > 0.5
@@ -74,3 +78,14 @@ def compute_bias_metrics_for_model(dataset,
                   BNSP_AUC: compute_bnsp_auc(dataset, subgroup, label_col, model)}
         records.append(record)
     return pd.DataFrame(records).sort_values('subgroup_auc', ascending=True)
+
+
+def get_metric_e2e(dev_df, result):
+    dev_df['modelss'] = result
+    overall_auc = calculate_overall_auc(dev_df, 'modelss')
+    bias_auc_df = compute_bias_metrics_for_model(dev_df, IDENTITY_COLUMNS, 'result', 'target')
+    subgroup_auc = power_mean(bias_auc_df[SUBGROUP_AUC], -5),
+    pbsn_auc = power_mean(bias_auc_df[BPSN_AUC], -5),
+    bnsp_auc = power_mean(bias_auc_df[BNSP_AUC], -5)
+    final_auc = get_final_metric(bias_auc_df, overall_auc)
+    return final_auc, overall_auc, subgroup_auc, pbsn_auc, bnsp_auc

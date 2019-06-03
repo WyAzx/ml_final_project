@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import pickle
 import sys
+from keras.engine.saving import load_model
+
 sys.path.append('keras_layers')
 from sklearn.model_selection import train_test_split
 
@@ -24,8 +26,8 @@ class Evaluator(object):
         self.model = model
         self.model_name = model_name
         self.dev_df = dev_df
-        self.weight_path = weight_path
-        self.model.load_weights(weight_path)
+        # self.weight_path = weight_path
+        # self.model.load_weights(weight_path)
         self.result = None
         self.overall_auc = None
         self.final_auc = None
@@ -70,10 +72,10 @@ class Evaluator(object):
 
 
 if __name__ == '__main__':
-    model_path = 'save_models/bert.weights-uncased-ml-e2.h5'
+    model_path = 'save_models/bert.weights-uncased-decay.h5'
     text_path = 'tok_text_uncased.pkl'
     df_path = 'data/train.csv'
-    max_len = 256
+    max_len = 512
     model_name = 'bert_uncased_base'
     df = pd.read_csv(df_path)
     texts = pickle.load(open(text_path, 'rb'))
@@ -82,6 +84,7 @@ if __name__ == '__main__':
     train_config = get_config()
     bert_config = get_bert_config(train_config)
     model = get_bert_multi_model(bert_config)
+    model.load_weights(model_path)
     eva = Evaluator(model, model_name, test_df, model_path, max_len)
     eva.predict()
     eva.evaluate()

@@ -1,210 +1,125 @@
-import os
-import sys
-os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
-sys.path.append('keras_layers')
-import numpy as np
 import pandas as pd
-import tensorflow as tf
-from keras.utils import multi_gpu_model
-from sklearn.model_selection import train_test_split
-from data_loader import tokenize_examples, seq_padding, DataGenerator, AllDataGenerator
-from bert.tokenization import FullTokenizer
-from keras_bert.optimizers import AdamWarmup
-from loggers import Logger
-from models.bert_base_model import get_bert_base_model, get_bert_multi_model, get_bert_multi_layers_model
-from utils import get_bert_config, get_config
-from keras.backend.tensorflow_backend import set_session
-from keras.optimizers import Adam
+import numpy as np
+import gc
+import os
+from keras.models import Model
+from nltk.tokenize.treebank import TreebankWordTokenizer
 
+tk = TreebankWordTokenizer()
+from keras.preprocessing import text, sequence
+from sklearn.model_selection import train_test_split
+from data_loader import GeneralDataGenerator, GeneralPredictGenerator, SeqDataGenerator
+from loggers import Logger
+from utils import build_matrix, get_weights
+from models.lstm_model import get_lstm_model
+from tqdm import tqdm
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 set_session(tf.Session(config=config))
+GEN = 1
 
-TARGET_COLUMN = 'target'
 IDENTITY_COLUMNS = [
     'male', 'female', 'homosexual_gay_or_lesbian', 'christian', 'jewish',
     'muslim', 'black', 'white', 'psychiatric_or_mental_illness'
 ]
 AUX_COLUMNS = ['target', 'severe_toxicity', 'obscene', 'identity_attack', 'insult', 'threat']
+TEXT_COLUMN = 'comment_text'
+TARGET_COLUMN = 'target'
 
 
-def train_ml_all_set():
-    train_config = get_config()
-    bert_config = get_bert_config(train_config)
+class Trainer(object):
+
+    def __init__(self, model: Model, save_model: Model, model_name: str):
+        self.model = model
+        self.save_model = save_model
+        self.model_name = model_name
+
+    def train(self, train_gen, logger, epochs):
+        self.model.fit_generator(
+            train_gen, len(train_gen), epochs=epochs, callbacks=[logger]
+        )
+
+    def save(self, save_path):
+        self.model.save(save_path)
+
+
+def train():
+    ################
+    #   LOAD DATA  #
+    ################
+    # df = pd.read_csv('processed_data/train_tok.csv')
+    # # tqdm.pandas()
+    # # texts = df['comment_text'].fillna('none').progress_apply(lambda s: ' '.join(tk.tokenize(s)))
+    # # df['comment_text'] = texts
+    # # df.to_csv('processed_data/train_tok.csv', index=False)
+    # texts = df['comment_text'].values
+    # labels_aux = df[AUX_COLUMNS].values
+    # labels = df[TARGET_COLUMN].values
+    # weights = get_weights(df)
+    #
+    # tokenizer = text.Tokenizer(filters='', lower=False)
+    # tokenizer.fit_on_texts(list(texts))
+    # texts = tokenizer.texts_to_sequences(texts)
+    #
+    # df['token_text'] = texts
+    #
+    # crawl_matrix, unknown_words_crawl = build_matrix(tokenizer.word_index, 'embedding/crawl-300d-2M.pkl')
+    # print('n unknown words (crawl): ', len(unknown_words_crawl))
+    #
+    # glove_matrix, unknown_words_glove = build_matrix(tokenizer.word_index, 'embedding/glove.840B.300d.pkl')
+    # print('n unknown words (glove): ', len(unknown_words_glove))
+    #
+    # max_features = len(tokenizer.word_index) + 1
+    # print('Vocab Size:', max_features)
+    #
+    # embedding_matrix = np.concatenate([crawl_matrix, glove_matrix], axis=-1)
+    # print('Embedding shape:', embedding_matrix.shape)
+    # del crawl_matrix
+    # del glove_matrix
+    # gc.collect()
+    # #
+    batch_size = 512
+    #
+    # train_texts, val_texts, train_df, val_df, train_indxs, val_indxs = train_test_split(texts, df, range(len(df)),
+    #                                                                                     random_state=59,
+    #                                                                                     test_size=0.055)
+    # train_label, train_aux_label, train_weight = labels[train_indxs], labels_aux[train_indxs], weights[train_indxs]
+    #
+    # val_df = val_df.reset_index()
     import pickle
-    with open('tok_text_uncased.pkl', 'rb') as h:
-        text = pickle.load(h)
-    with open('y_train.pkl', 'rb') as h:
-        label = pickle.load(h)
-    with open('y_aux.pkl', 'rb') as h:
-        aux = pickle.load(h)
-    with open('sample_weight.pkl', 'rb') as h:
-        sample_weight = pickle.load(h)
-    train_text, _, train_label, _, train_aux, _, train_sw, _ = train_test_split(text, label, aux, sample_weight.values,
-                                                                                test_size=0.055, random_state=59)
-    train_gen = AllDataGenerator(train_text, train_label, train_aux, train_sw, batch_size=32, max_len=220)
+    # pickle.dump(embedding_matrix, open('processed_data/emb.pkl', 'wb'))
+    # pickle.dump(train_texts, open('processed_data/train_texts.pkl', 'wb'))
+    # pickle.dump(val_texts, open('processed_data/val_texts.pkl', 'wb'))
+    # pickle.dump(train_label, open('processed_data/train_label.pkl', 'wb'))
+    # pickle.dump(train_aux_label, open('processed_data/train_aux_label.pkl', 'wb'))
+    # pickle.dump(train_weight, open('processed_data/train_weight.pkl', 'wb'))
+    # val_df.to_csv('processed_data/val.csv', index=False)
 
-    with tf.device('/cpu:0'):
-        model = get_bert_multi_layers_model(bert_config)
+    embedding_matrix = pickle.load(open('processed_data/emb.pkl', 'rb'))
+    train_texts = pickle.load(open('processed_data/train_texts.pkl', 'rb'))
+    val_texts = pickle.load(open('processed_data/val_texts.pkl', 'rb'))
+    train_label = pickle.load(open('processed_data/train_label.pkl', 'rb'))
+    train_aux_label = pickle.load(open('processed_data/train_aux_label.pkl', 'rb'))
+    train_weight = pickle.load(open('processed_data/train_weight.pkl', 'rb'))
+    val_df = pd.read_csv('processed_data/val.csv')
 
-    # optimizer = Adam(lr=2e-5)
-    # OPTIMIZER PARAMs
-    lr = 2e-5
-    weight_decay = 0.001
-    bsz = 32
-    decay_steps = 1 * len(train_gen)
-    warmup_steps = int(0.1 * decay_steps)
+    if GEN != 0:
+        train_gen = GeneralDataGenerator(inputs=[train_texts], outputs=[train_label, train_aux_label],
+                                         sample_weights=[train_weight, np.ones_like(train_weight)], batch_size=batch_size)
+    else:
+        train_gen = SeqDataGenerator(train_texts, train_label, train_aux_label, train_weight)
+    val_gen = GeneralPredictGenerator(text=val_df['token_text'].values)
 
-    optimizer = AdamWarmup(
-        decay_steps=decay_steps,
-        warmup_steps=warmup_steps,
-        lr=lr,
-        weight_decay=weight_decay,
-    )
+    model, save_model = get_lstm_model(embedding_matrix, len(AUX_COLUMNS))
 
-    parallel_model = multi_gpu_model(model, gpus=2)
-    parallel_model.compile(loss='binary_crossentropy', optimizer=optimizer)
-    parallel_model.fit_generator(train_gen.__iter__(),
-                                 steps_per_epoch=len(train_gen),
-                                 epochs=1,
-                                 max_queue_size=20,
-                                 )
-    model.save('save_models/bert.weights-uncased-ml2.h5')
-    # print('SAVED')
-    # parallel_model.fit_generator(train_gen.__iter__(),
-    #                              steps_per_epoch=len(train_gen),
-    #                              epochs=1,
-    #                              max_queue_size=20,
-    #                              )
-    # model.save('save_models/bert.weights-uncased-ml2-e2.h5')
-    print("DONE")
+    logger = Logger(save_model, 'lstm_baseline', val_gen, val_df)
 
-
-def train_on_all_set():
-    train_config = get_config()
-    bert_config = get_bert_config(train_config)
-    import pickle
-    with open('tok_text_uncased.pkl', 'rb') as h:
-        text = pickle.load(h)
-    with open('y_train.pkl', 'rb') as h:
-        label = pickle.load(h)
-    with open('y_aux.pkl', 'rb') as h:
-        aux = pickle.load(h)
-    with open('sample_weight.pkl', 'rb') as h:
-        sample_weight = pickle.load(h)
-
-    train_gen = AllDataGenerator(text, label, aux, sample_weight)
-
-    with tf.device('/cpu:0'):
-        model = get_bert_multi_model(bert_config)
-    # model.load_weights('save_models/bert.weights.h5')
-
-    # OPTIMIZER PARAMs
-    lr = 2e-5
-    weight_decay = 0.001
-    bsz = 32
-    decay_steps = 1 * len(train_gen)
-    warmup_steps = int(0.1 * decay_steps)
-
-    optimizer = AdamWarmup(
-        decay_steps=decay_steps,
-        warmup_steps=warmup_steps,
-        lr=lr,
-        weight_decay=weight_decay,
-    )
-
-    parallel_model = multi_gpu_model(model, gpus=4)
-    parallel_model.compile(loss='binary_crossentropy', optimizer=optimizer)
-    parallel_model.fit_generator(train_gen.__iter__(),
-                                 steps_per_epoch=len(train_gen),
-                                 epochs=1,
-                                 max_queue_size=100,
-                                 )
-    model.save('save_models/bert.weights-uncased.h5')
-    print("DONE")
-
-
-def train_on_train_test_split():
-    train_config = get_config()
-    bert_config = get_bert_config(train_config)
-    cased = train_config.BERT_DIR.split('/')[-1].startswith('cased')
-    tokenizer = FullTokenizer(bert_config.vocab, do_lower_case=cased)
-
-    with tf.device('/cpu:0'):
-        model = get_bert_base_model(bert_config)
-
-    text, label = load_data(os.path.join(train_config.DATA_DIR, 'train.csv'))
-    train_text, val_text, train_label, val_label = train_test_split(text, label, test_size=0.055, random_state=59)
-    train_gen = DataGenerator(train_text, train_label, tokenizer, batch_size=32)
-
-    val_text = tokenize_examples(val_text, tokenizer, max_len=512)
-    val_text = seq_padding(val_text)
-
-    logger = Logger(model=model, val_text=val_text, val_label=(val_label > 0.5).astype(np.float32))
-
-    # OPTIMIZER PARAMs
-    lr = 2e-5
-    weight_decay = 0.01
-    bsz = 32
-    decay_steps = 1 * len(train_gen)
-    warmup_steps = int(0.1 * decay_steps)
-
-    optimizer = AdamWarmup(
-        decay_steps=decay_steps,
-        warmup_steps=warmup_steps,
-        lr=lr,
-        weight_decay=weight_decay,
-    )
-
-    parallel_model = multi_gpu_model(model, gpus=4)
-    parallel_model.compile(loss='binary_crossentropy', optimizer=optimizer)
-    parallel_model.fit_generator(train_gen.__iter__(),
-                                 steps_per_epoch=len(train_gen),
-                                 epochs=1,
-                                 callbacks=[logger],
-                                 max_queue_size=100
-                                 )
-
-
-def load_data(data_path):
-    print(data_path)
-    data = pd.read_csv(data_path)
-    text, label = data['comment_text'].values, data.target.values
-    return text, label
-
-
-def tokenize_bert():
-    train_config = get_config()
-    bert_config = get_bert_config(train_config)
-    uncased = train_config.BERT_DIR.split('/')[-1].startswith('uncased')
-    tokenizer = FullTokenizer(bert_config.vocab, do_lower_case=uncased)
-    text, _ = load_data(os.path.join(train_config.DATA_DIR, 'train.csv'))
-    tok_text = tokenize_examples(text, tokenizer, max_len=512)
-    import pickle
-    pickle.dump(tok_text, open('tok_text_uncased.pkl', 'wb'))
-
-
-def get_weight():
-    train_config = get_config()
-    train_df = pd.read_csv(os.path.join(train_config.DATA_DIR, 'train.csv'))
-    y_train = train_df[TARGET_COLUMN].values
-    y_aux_train = train_df[AUX_COLUMNS].values
-    for column in IDENTITY_COLUMNS + [TARGET_COLUMN]:
-        train_df[column] = np.where(train_df[column] >= 0.5, True, False)
-    sample_weights = np.ones(len(y_train), dtype=np.float32)
-    sample_weights += train_df[IDENTITY_COLUMNS].sum(axis=1)
-    sample_weights += train_df[TARGET_COLUMN] * (~train_df[IDENTITY_COLUMNS]).sum(axis=1)
-    sample_weights += (~train_df[TARGET_COLUMN]) * train_df[IDENTITY_COLUMNS].sum(axis=1) * 5
-    sample_weights /= sample_weights.mean()
-    import pickle
-    pickle.dump(y_aux_train, open('y_aux.pkl', 'wb'))
-    pickle.dump(sample_weights, open('sample_weight.pkl', 'wb'))
-    pickle.dump(y_train, open('y_train.pkl', 'wb'))
+    model.fit_generator(train_gen.__iter__(), len(train_gen), epochs=5, callbacks=[logger])
 
 
 if __name__ == '__main__':
-    # train_on_train_test_split()
-    # tokenize_bert()
-    # get_weight()
-    # train_on_all_set()
-    train_ml_all_set()
+    train()
