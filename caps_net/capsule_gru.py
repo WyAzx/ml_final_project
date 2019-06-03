@@ -4,26 +4,22 @@
 
 import gc
 import pandas as pd
-from Capsule_Keras import Capsule
 from keras.layers import *
 from keras.models import Model
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.text import Tokenizer
+
+from Capsule_Keras import Capsule
 
 maxlen = 220
 max_features = 100000
 embed_size = 300
 batch_size = 64
 
-# cur_dir = os.path.dirname(os.path.abspath("__file__"))
-# root_dir = os.path.dirname(cur_dir)
-# # data_dir = os.path.join(root_dir, "data")
-# data_dir = os.path.join(root_dir, "data")
-# train_file = os.path.join(data_dir, "train_preprocessed.csv")
-# test_file = os.path.join(data_dir, "test_preprocessed.csv")
-
-train_df = pd.read_csv("../input/train.csv")
-test_df = pd.read_csv("../input/test.csv")
+train_df = pd.read_csv("../data/train_preprocessed.csv", nrows=100)
+test_df = pd.read_csv("../data/test_preprocessed.csv", nrows=100)
+# train_df = pd.read_csv("../input/train.csv")
+# test_df = pd.read_csv("../input/test.csv")
 
 TEXT_COL = "comment_text"
 
@@ -70,29 +66,65 @@ def get_model():
         share_weights=True)(x)
 
     capsule = Flatten()(capsule)
-    capsule = Dropout(0.25)(capsule)
+    # capsule = Dropout(0.25)(capsule)
     #     capsule = LeakyReLU()(capsule)
 
     #     x = Flatten()(x)
-    output = Dense(1, activation='sigmoid')(capsule)
-    model = Model(inputs=input1, outputs=output)
-    model.compile(
-        loss='binary_crossentropy',
-        optimizer='adam',
-        metrics=['accuracy'])
-    model.summary()
+    output1 = Dense(1, activation='sigmoid', name="out1")(Dropout(0.25)(capsule))
+    output2 = Dense(1, activation='sigmoid', name="out2")(Dropout(0.3)(capsule))
+    output3 = Dense(1, activation='sigmoid', name="out3")(Dropout(0.5)(capsule))
+    model = Model(inputs=input1, outputs=[output1, output2, output3])
 
     return model
 
 
+from sklearn.utils import class_weight
+
+sample_weights = class_weight.compute_sample_weight('balanced', Y_train)
+
+# import keras.backend as K
+
+#
+# def multitask_loss(y_true, y_pred):
+#     # Avoid divide by 0
+#     y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+#     # Multi-task loss
+#     return K.mean(K.sum(- y_true * K.log(y_pred) - (1 - y_true) * K.log(1 - y_pred), axis=1))
+
+
 model = get_model()
+model.compile(
+    optimizer='adam',
+    loss={
+        'out1': 'binary_crossentropy',
+        'out2': 'binary_crossentropy',
+        'out3': 'binary_crossentropy'},
+    loss_weights={
+        'out1': 0.9,
+        'out2': 0.9,
+        'out3': 0.8},
+    metrics=['accuracy'])
+model.summary()
+
+gc.collect()
+
 model.fit(X_train, Y_train,
           batch_size=batch_size,
           epochs=10,
           verbose=1,
           # validation_data=(x_test, y_test)
-          validation_split=0.1)
+          validation_split=0.1,
+          sample_weight=sample_weights,
+          )
+
+model.save("capsule_net.hdf5")
+
 Y_pred = model.predict(X_test)  # 用模型进行预测
+
+import ipdb
+
+ipdb.set_trace()
+
 test_df["prediction"] = Y_pred.flatten().tolist()
 test_df[["id", "prediction"]].to_csv("./sample_submission.csv", index=False)
 print("Done ...")

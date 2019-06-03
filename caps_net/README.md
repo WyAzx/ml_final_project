@@ -20,3 +20,6 @@ https://github.com/bojone/Capsule/blob/master/Capsule_Keras.py
 https://github.com/stefan-it/capsnet-nlp
 
 
+# 多任务学习  
+https://blog.csdn.net/u012938704/article/details/79904173
+https://www.zhihu.com/question/48175729
