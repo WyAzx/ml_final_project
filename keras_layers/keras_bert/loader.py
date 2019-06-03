@@ -22,14 +22,13 @@ def build_model_from_config(config_file,
                             training=False,
                             trainable=None,
                             output_layer_num=1,
-                            seq_len=None,
-                            trainable_list=None):
+                            seq_len=None):
     """Build the model from config file.
 
     :param config_file: The path to the JSON configuration file.
     :param training: If training, the whole model will be returned.
     :param trainable: Whether the model is trainable.
-    :param output_layer_num: The number of keras_layers whose outputs will be concatenated as a single output.
+    :param output_layer_num: The number of layers whose outputs will be concatenated as a single output.
                              Only available when `training` is `False`.
     :param seq_len: If it is not None and it is shorter than the value in the config file, the weights in
                     position embeddings will be sliced to fit the new length.
@@ -49,10 +48,10 @@ def build_model_from_config(config_file,
         transformer_num=config['num_hidden_layers'],
         head_num=config['num_attention_heads'],
         feed_forward_dim=config['intermediate_size'],
+        feed_forward_activation=config['hidden_act'],
         training=training,
         trainable=trainable,
         output_layer_num=output_layer_num,
-        trainable_list=trainable_list
     )
     if not training:
         inputs, outputs = model
@@ -147,8 +146,7 @@ def load_trained_model_from_checkpoint(config_file,
                                        training=False,
                                        trainable=None,
                                        output_layer_num=1,
-                                       seq_len=None,
-                                       trainable_list=None):
+                                       seq_len=None):
     """Load trained official model from checkpoint.
 
     :param config_file: The path to the JSON configuration file.
@@ -156,7 +154,7 @@ def load_trained_model_from_checkpoint(config_file,
     :param training: If training, the whole model will be returned.
                      Otherwise, the MLM and NSP parts will be ignored.
     :param trainable: Whether the model is trainable. The default value is the same with `training`.
-    :param output_layer_num: The number of keras_layers whose outputs will be concatenated as a single output.
+    :param output_layer_num: The number of layers whose outputs will be concatenated as a single output.
                              Only available when `training` is `False`.
     :param seq_len: If it is not None and it is shorter than the value in the config file, the weights in
                     position embeddings will be sliced to fit the new length.
@@ -168,7 +166,6 @@ def load_trained_model_from_checkpoint(config_file,
         trainable=trainable,
         output_layer_num=output_layer_num,
         seq_len=seq_len,
-        trainable_list=trainable_list
     )
     load_model_weights_from_checkpoint(model, config, checkpoint_file, training=training)
     return model
