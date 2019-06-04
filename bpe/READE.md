@@ -11,11 +11,16 @@
 embedding初始化我们的embedding就可以了  
 
 ```python
-# !pip install bpemb
+# !pip install bpemb 
+# https://nlp.h-its.org/bpemb/en/en.wiki.bpe.vs100000.d100.w2v.bin.tar.gz
+from pathlib import Path
 from bpemb import BPEmb
 vocab_size=100000
 embedding_dim=100
-bpemb_en_100k = BPEmb(lang="en", vs=vocab_size, dim=embedding_dim)  # 40 M；词表越大切分越少
+bpemb_en_100k = BPEmb(lang="en", vs=vocab_size, dim=embedding_dim,
+cache_dir=Path.home() / Path(".cache/bpemb"))  # 40 M；词表越大切分越少
+
+
 s="hello world !"
 s_ids=bpemb_en_100k.encode_ids(s)
 [34542, 501, 54039]
