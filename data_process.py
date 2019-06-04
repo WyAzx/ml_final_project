@@ -272,7 +272,7 @@ class PatternTokenizer(BaseTokenizer):
         for target, patterns in self.patterns.items():
             for pat in patterns:
                 x = re.sub(pat, target, x)
-        x = re.sub(r"[^a-z' ]", ' ', x)
+        # x = re.sub(r"[^a-z' ]", ' ', x)
         return x.split()
 
     def process_ds(self, ds):
@@ -298,20 +298,19 @@ class PatternTokenizer(BaseTokenizer):
             for pat in patterns:
                 ds = ds.str.replace(pat, target)
 
-        ds = ds.str.replace(r"[^a-z' ]", ' ')
-
+        # ds = ds.str.replace(r"[^a-z' ]", ' ')
         return ds.str.split()
 
 
 def main():
     train = pd.read_csv("data/train.csv")
     # test = pd.read_csv("data/test.csv")
-
     tokenizer = PatternTokenizer(lower=False)
     train["comment_text"] = tokenizer.process_ds(train["comment_text"]).str.join(sep=" ")
     # test["comment_text"] = tokenizer.process_ds(test["comment_text"]).str.join(sep=" ")
     train.to_csv("processed_data/train.csv", index=False)
     # test.to_csv("test_preprocessed.csv", index=False)
+
 
 
 if __name__ == "__main__":
