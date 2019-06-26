@@ -214,4 +214,5 @@ class MultiHeadAttention(keras.layers.Layer):
             y += self.bo
         if self.activation is not None:
             y = self.activation(y)
+        y = K.reshape(y, (-1, 512, 768))
         return y
