@@ -39,7 +39,7 @@ class AttentionLayer(keras.layers.Layer):
 
         super(AttentionLayer, self).build(input_shape)
 
-    def _get_attention_weights(self, X):
+    def _get_attention_weights(self, X, mask):
         """
         Computes the attention weights for each timestep in X
         :param X: 3d-tensor (batch_size, time_steps, input_dim)
@@ -54,16 +54,25 @@ class AttentionLayer(keras.layers.Layer):
 
         # Remove the last axis an apply softmax to the stimulus to
         # get a probability.
-        tw_stimulus = K.reshape(tw_stimulus, (-1, tw_stimulus.shape[1]))
+        # tw_stimulus = K.reshape(tw_stimulus, (-1, K.shape(tw_stimulus.shape)[1]))
+        tw_stimulus = K.squeeze(tw_stimulus, axis=-1)
         att_weights = K.softmax(tw_stimulus)
+
+        if mask is not None:
+            att_weights = att_weights * K.cast(mask, K.floatx())
+            att_weights /= K.mean(att_weights, axis=1, keepdims=True)
 
         return att_weights
 
-    def call(self, X, **kwargs):
-        att_weights = self._get_attention_weights(X)
+    def compute_mask(self, inputs, mask=None):
+        return None
+
+    def call(self, X, mask=None):
+        att_weights = self._get_attention_weights(X, mask)
 
         # Reshape the attention weights to match the dimensions of X
-        att_weights = K.reshape(att_weights, (-1, att_weights.shape[1], 1))
+        # att_weights = K.reshape(att_weights, (-1, att_weights.shape[1], 1))
+        att_weights = K.expand_dims(att_weights, axis=-1)
         att_weights = K.repeat_elements(att_weights, X.shape[-1], -1)
 
         # Multiply each input by its attention weights

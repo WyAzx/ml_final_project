@@ -81,8 +81,8 @@ def compute_bias_metrics_for_model(dataset,
 
 
 def get_metric_e2e(dev_df, result):
-    dev_df['modelss'] = result
-    overall_auc = calculate_overall_auc(dev_df, 'modelss')
+    dev_df['result'] = result
+    overall_auc = calculate_overall_auc(dev_df, 'result')
     bias_auc_df = compute_bias_metrics_for_model(dev_df, IDENTITY_COLUMNS, 'result', 'target')
     subgroup_auc = power_mean(bias_auc_df[SUBGROUP_AUC], -5),
     pbsn_auc = power_mean(bias_auc_df[BPSN_AUC], -5),

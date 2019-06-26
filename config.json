@@ -1,4 +1,4 @@
 {
-  "BERT_DIR": "bert_models/uncased_L-12_H-768_A-12",
+  "BERT_DIR": "bert_models/wwm_uncased_L-24_H-1024_A-16",
   "DATA_DIR": "/nfs/project/wangyun/jigsaw/data"
 }

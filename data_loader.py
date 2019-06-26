@@ -144,12 +144,15 @@ class PredictDataGenerator(object):
 
 
 class GeneralPredictGenerator(object):
-    def __init__(self, text, batch_size=512, max_len=512):
+    def __init__(self, text, batch_size=512, max_len=512, pad_fn=None):
         # self.x = tokenize_examples(x, tokenizer, max_len)
         self.text = text
         self.batch_size = batch_size
         self.steps = len(self.text) // self.batch_size
         self.max_len = max_len
+        self.pad_fn = pad_fn
+        if self.pad_fn is None:
+            self.pad_fn = lambda x: seq_padding(x, truncate=False)
         if len(self.text) % self.batch_size != 0:
             self.steps += 1
 
@@ -162,18 +165,55 @@ class GeneralPredictGenerator(object):
             for i in range(len(self.text)):
                 X.append(self.text[i])
                 if len(X) == self.batch_size or i == len(self.text) - 1:
-                    X = seq_padding(X, self.max_len, False)
+                    X = self.pad_fn(X)
                     X = np.array(X)
                     yield [X]
                     X = []
 
 
+class ELMoPredictGenerator(object):
+    def __init__(self, text_ids, text, batch_size=512, max_len=512, pad_fn=None):
+        # self.x = tokenize_examples(x, tokenizer, max_len)
+        self.text = text
+        self.text_ids = text_ids
+        self.batch_size = batch_size
+        self.steps = len(self.text) // self.batch_size
+        self.max_len = max_len
+        self.pad_fn = pad_fn
+        if self.pad_fn is None:
+            self.pad_fn = [lambda x: seq_padding(x, truncate=False)]
+        if len(self.text) % self.batch_size != 0:
+            self.steps += 1
+
+    def __len__(self):
+        return self.steps
+
+    def __iter__(self):
+        while True:
+            X_ids, X = [], []
+            for i in range(len(self.text)):
+                X_ids.append(self.text_ids[i])
+                X.append(self.text[i])
+                if len(X) == self.batch_size or i == len(self.text) - 1:
+                    X_ids = self.pad_fn[0](X_ids)
+                    X_ids = np.array(X_ids)
+                    X = self.pad_fn[1](X)
+                    X = np.array(X)
+                    yield [X_ids, X]
+                    X_ids, X = [], []
+
+
+
 class Batcher(object):
-    def __init__(self, inputs, outputs, sample_weights, batch_size):
+    def __init__(self, inputs, outputs, sample_weights, batch_size, pad_fn=None):
         self.inputs = inputs
         self.out_puts = outputs
         self.sample_weight = sample_weights
         self.batch_size = batch_size
+        self.pad_fn = pad_fn
+        if self.pad_fn is None:
+            self.pad_fn = [lambda x: seq_padding(x, truncate=False)]
+        self.stop = False
 
         self._batch_queue = Queue(200)
         self._example_queue = Queue(maxsize=len(self.inputs[0]))
@@ -195,12 +235,14 @@ class Batcher(object):
     def fill_batch_queue(self):
 
         while True:
+            if self.stop:
+                return
             inputs = []
             for _ in range(self.batch_size * 50):
                 idx = self._example_queue.get()
                 exp_input = [inp[idx] for inp in self.inputs]
                 exp_output = [out[idx] for out in self.out_puts]
-                exp_sw = [sw[idx] for sw in self.sample_weight] if self.sample_weight is not None else None
+                exp_sw = [sw[idx] for sw in self.sample_weight] if self.sample_weight is not None else [None]
                 exp = (exp_input, exp_output, exp_sw)
                 inputs.append(exp)
             inputs = sorted(inputs, key=lambda inp: len(inp[0][0]))  # sort by length of encoder sequence
@@ -210,14 +252,17 @@ class Batcher(object):
             for i in range(0, len(inputs), self.batch_size):
                 exps = inputs[i:i + self.batch_size]
                 batch_inputs, batch_outputs, batch_sample_weight = zip(*exps)
-                batch_inputs = [seq_padding(inp, truncate=False) for inp in zip(*batch_inputs)]
+                batch_inputs = [self.pad_fn[i](inp) for i, inp in enumerate(zip(*batch_inputs))]
                 batch_inputs = [np.array(inp) for inp in batch_inputs]
                 batch_outputs = zip(*batch_outputs)
                 batch_outputs = [np.array(out) for out in batch_outputs]
-                batch_sample_weight = zip(*batch_sample_weight) if batch_sample_weight is not None else None
+                batch_sample_weight = zip(*batch_sample_weight) if None not in batch_sample_weight else None
                 batch_sample_weight = [np.array(sw) for sw in
                                        batch_sample_weight] if batch_sample_weight is not None else None
-                batches.append([batch_inputs, batch_outputs, batch_sample_weight])
+                if self.sample_weight is not None:
+                    batches.append([batch_inputs, batch_outputs, batch_sample_weight])
+                else:
+                    batches.append([batch_inputs, batch_outputs])
             shuffle(batches)
             for b in batches:  # each b is a list of Example objects
                 self._batch_queue.put(b)
@@ -226,6 +271,8 @@ class Batcher(object):
         """Watch example queue and batch queue threads and restart if dead."""
         while True:
             time.sleep(60)
+            if self.stop:
+                return
             for idx, t in enumerate(self._batch_q_threads):
                 if not t.is_alive():  # if the thread is dead
                     print('Found batch queue thread dead. Restarting.')
@@ -252,14 +299,17 @@ class Batcher(object):
         batch = self._batch_queue.get()  # get the next Batch
         return batch
 
+    def close(self):
+        self.stop = True
+
 
 class GeneralDataGenerator(object):
-    def __init__(self, inputs, outputs, sample_weights, batch_size):
+    def __init__(self, inputs, outputs, sample_weights, batch_size, pad_fn=None):
         self.inputs = inputs
         self.out_puts = outputs
         self.sample_weight = sample_weights
         self.batch_size = batch_size
-        self.batcher = Batcher(inputs, outputs, sample_weights, batch_size)
+        self.batcher = Batcher(inputs, outputs, sample_weights, batch_size, pad_fn)
         self.steps = len(self.inputs[0]) // self.batch_size
         if len(self.inputs[0]) % self.batch_size != 0:
             self.steps += 1
@@ -271,6 +321,9 @@ class GeneralDataGenerator(object):
         while True:
             batch = self.batcher.next_batch()
             yield batch
+
+    def close(self):
+        self.batcher.close()
 
 
 class SeqDataGenerator(object):
