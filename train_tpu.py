@@ -10,7 +10,7 @@ from data_loader import tokenize_examples, seq_padding, DataGenerator, AllDataGe
 from keras_bert.optimizers import AdamWarmup
 from loggers import Logger
 from models.bert_base_model import get_bert_base_model, get_bert_multi_model, get_bert_multi_layers_model
-from utils import get_bert_config, get_config, get_weights_new, BertConfig
+from utils import get_bert_config, get_config, get_weights_new, BertConfig, get_weights_new_array
 from bert import tokenization
 from keras_bert import get_custom_objects
 
@@ -61,8 +61,11 @@ def train_bert_on_tpu():
 
   label = df['target'].values
   aux_label = df[AUX_COLUMNS].values
+  import pickle
 
-  weight = weight_df['weight'].values
+  ids = pickle.load(open('data/ids.pkl', 'rb'))
+  weight = get_weights_new_array(ids, label)
+  # weight = weight_df['weight'].values
 
   del df
   del weight_df
@@ -70,13 +73,11 @@ def train_bert_on_tpu():
   train_text, _, train_label, _, train_aux, _, train_weights, _ = train_test_split(texts, label, aux_label, weight,
                                                                                    test_size=0.055, random_state=59)
 
-  train_text = convert_lines(train_text, 512, tokenizer, prunc='ei')
-  import pickle
-  pickle.dump(train_text, open('train_text_ei.pkl', 'wb'))
+  # train_text = convert_lines(train_text, 512, tokenizer, prunc='ei')
+  train_text = pickle.load(open('train_text_ei.pkl', 'rb'))
+  # pickle.dump(train_text, open('train_text_ei.pkl', 'wb'))
   lw = 1 / np.mean(train_weights)
-  # train_gen = GeneralDataGenerator(inputs=[train_text], outputs=[train_label, train_aux],
-  #                                  sample_weights=[train_weights, np.ones_like(train_weights)], batch_size=64,
-  #                                  pad_fn=[pad_fn])
+
 
   train_gen = AllDataGenerator(train_text, train_label, train_aux, train_weights, batch_size=64)
   model = get_bert_multi_model(bert_config)

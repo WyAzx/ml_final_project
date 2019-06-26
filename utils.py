@@ -145,6 +145,10 @@ def get_weights_new_array(idts, labels):
     weights += (((labels < 0.5).astype(bool).astype(np.int) +
                  (idts >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
         bool).astype(np.int) * 3 / 4
+
+    weights += (((labels == 0).astype(bool).astype(np.int) +
+                 (idts >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
+        bool).astype(np.int) * 3 / 4
     return weights
 
 
