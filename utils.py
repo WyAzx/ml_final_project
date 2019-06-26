@@ -122,6 +122,10 @@ def get_weights_new(df):
     weights += (((df['target'].values < 0.5).astype(bool).astype(np.int) +
                  (df[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
         bool).astype(np.int) * 3 / 4
+
+    weights += (((df['target'].values == 0.0).astype(bool).astype(np.int) +
+                 (df[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
+        bool).astype(np.int) * 3 / 4
     return weights
 
 

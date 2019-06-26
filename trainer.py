@@ -257,7 +257,7 @@ def train_split():
   labels_aux = df[AUX_COLUMNS].values
   identities = iden_df[IDENTITY_COLUMNS].fillna(0).values
   labels = df[TARGET_COLUMN].values
-  weights = get_weights2(iden_df)
+  weights = get_weights_new(iden_df)
 
   # labels = (labels >= 0.5).astype(np.float)
   # labels_aux = (labels_aux >= 0.5).astype(np.float)
@@ -314,7 +314,7 @@ def train_split():
   EMAer = ExponentialMovingAverage(model)
   EMAer.inject()
 
-  logger = KFoldLogger('lstm_w0_final', val_gen, val_true=val_labels, val_iden=val_iden, patience=10,
+  logger = KFoldLogger('lstm_w1_final', val_gen, val_true=val_labels, val_iden=val_iden, patience=10,
                        lr_patience=5)
 
   model.fit_generator(train_gen.__iter__(), len(train_gen), epochs=15, callbacks=[logger], verbose=1)

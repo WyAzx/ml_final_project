@@ -146,15 +146,16 @@ if __name__ == '__main__':
 
     # val_gen = PredictDataGenerator(text, 32, max_len)
     # res = model.predict_generator(val_gen.__iter__(), len(val_gen))[0].flatten()
-    import json
-
+    # import json
+    df = pd.read_csv('predict_jigsaw1.tsv', delimiter='\t')
+    res = df['prediction']
     def sigmoid(x, derivative=False):
         sigm = 1. / (1. + np.exp(-x))
         if derivative:
             return sigm * (1. - sigm)
         return sigm
-    res = json.load(open('predict_jigsaw.logits.json', 'r'))
-    res = np.array([sigmoid(r[0]) for r in res])
+
+    res = np.array([sigmoid(r) for r in res])
     print(res[:10])
     eva = JigsawEvaluator(label, idens)
     final_auc, overall_auc, sub_auc, bpsn_auc, bnsp_auc, bias_metrics = eva.get_final_metric(res)

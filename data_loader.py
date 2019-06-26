@@ -205,11 +205,12 @@ class ELMoPredictGenerator(object):
 
 
 class Batcher(object):
-    def __init__(self, inputs, outputs, sample_weights, batch_size, pad_fn=None):
+    def __init__(self, inputs, outputs, sample_weights, batch_size, pad_fn=None, bert=True):
         self.inputs = inputs
         self.out_puts = outputs
         self.sample_weight = sample_weights
         self.batch_size = batch_size
+        self.bert = bert
         self.pad_fn = pad_fn
         if self.pad_fn is None:
             self.pad_fn = [lambda x: seq_padding(x, truncate=False)]
@@ -254,6 +255,8 @@ class Batcher(object):
                 batch_inputs, batch_outputs, batch_sample_weight = zip(*exps)
                 batch_inputs = [self.pad_fn[i](inp) for i, inp in enumerate(zip(*batch_inputs))]
                 batch_inputs = [np.array(inp) for inp in batch_inputs]
+                if self.bert:
+                    batch_inputs.append(np.zeros_like(batch_inputs[0]))
                 batch_outputs = zip(*batch_outputs)
                 batch_outputs = [np.array(out) for out in batch_outputs]
                 batch_sample_weight = zip(*batch_sample_weight) if None not in batch_sample_weight else None
@@ -304,12 +307,12 @@ class Batcher(object):
 
 
 class GeneralDataGenerator(object):
-    def __init__(self, inputs, outputs, sample_weights, batch_size, pad_fn=None):
+    def __init__(self, inputs, outputs, sample_weights, batch_size, pad_fn=None, bert=True):
         self.inputs = inputs
         self.out_puts = outputs
         self.sample_weight = sample_weights
         self.batch_size = batch_size
-        self.batcher = Batcher(inputs, outputs, sample_weights, batch_size, pad_fn)
+        self.batcher = Batcher(inputs, outputs, sample_weights, batch_size, pad_fn, bert)
         self.steps = len(self.inputs[0]) // self.batch_size
         if len(self.inputs[0]) % self.batch_size != 0:
             self.steps += 1

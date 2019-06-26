@@ -17,7 +17,6 @@ from utils import get_bert_config, get_config, get_weights_new
 from keras.backend.tensorflow_backend import set_session
 from keras.optimizers import Adam
 from focal_loss import focal_loss
-
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 set_session(tf.Session(config=config))
