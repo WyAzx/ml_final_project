@@ -13,6 +13,7 @@ from models.bert_base_model import get_bert_base_model, get_bert_multi_model, ge
 from utils import get_bert_config, get_config, get_weights_new, BertConfig, get_weights_new_array
 from bert import tokenization
 from keras_bert import get_custom_objects
+from keras_bert.backend import keras
 
 
 IDENTITY_COLUMNS = [
@@ -82,17 +83,18 @@ def train_bert_on_tpu():
   train_gen = AllDataGenerator(train_text, train_label, train_aux, train_weights, batch_size=64)
   model = get_bert_multi_model(bert_config)
 
-  lr = 2e-5
-  weight_decay = 0.01
-  decay_steps = 1 * len(train_gen)
-  warmup_steps = int(0.1 * decay_steps)
-
-  optimizer = AdamWarmup(
-    decay_steps=decay_steps,
-    warmup_steps=warmup_steps,
-    lr=lr,
-    weight_decay=weight_decay,
-  )
+  optimizer = keras.optimizers.Adam(2e-5)
+  # lr = 2e-5
+  # weight_decay = 0.01
+  # decay_steps = 1 * len(train_gen)
+  # warmup_steps = int(0.1 * decay_steps)
+  #
+  # optimizer = AdamWarmup(
+  #   decay_steps=decay_steps,
+  #   warmup_steps=warmup_steps,
+  #   lr=lr,
+  #   weight_decay=weight_decay,
+  # )
 
   strategy = tf.contrib.tpu.TPUDistributionStrategy(
     tf.contrib.cluster_resolver.TPUClusterResolver("node-2", zone="us-central1-b", project='studied-acronym-235702')
