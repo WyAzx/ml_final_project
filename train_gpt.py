@@ -135,7 +135,15 @@ def get_weight():
     df.to_csv('new_processed_data/train_weight.csv', index=False)
 
 
+def get_iden():
+    iden_df = pd.read_csv('processed_data/train_tok_iden.csv')
+    ids = iden_df[IDENTITY_COLUMNS].values
+    import pickle
+    pickle.dump(ids, open('ids.pkl', 'wb'))
+
+
 if __name__ == '__main__':
     # train_gpt()
     # get_weight()
-    val_gpt()
+    # val_gpt()
+    get_iden()

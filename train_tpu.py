@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.append('keras_layers')
+os.environ['TF_KERAS'] = '1'
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -70,6 +71,8 @@ def train_bert_on_tpu():
                                                                                    test_size=0.055, random_state=59)
 
   train_text = convert_lines(train_text, 512, tokenizer, prunc='ei')
+  import pickle
+  pickle.dump(train_text, open('train_text_ei.pkl', 'wb'))
   lw = 1 / np.mean(train_weights)
   # train_gen = GeneralDataGenerator(inputs=[train_text], outputs=[train_label, train_aux],
   #                                  sample_weights=[train_weights, np.ones_like(train_weights)], batch_size=64,
