@@ -49,7 +49,6 @@ def convert_lines(example, max_seq_length, tokenizer, prunc='pre'):
       longer += 1
     one_token = tokenizer.convert_tokens_to_ids(["[CLS]"] + tokens_a + ["[SEP]"])
     all_tokens.append(one_token)
-  print(longer)
   return np.array(all_tokens)
 
 
@@ -70,14 +69,13 @@ def train_bert_on_tpu():
   train_text, _, train_label, _, train_aux, _, train_weights, _ = train_test_split(texts, label, aux_label, weight,
                                                                                    test_size=0.055, random_state=59)
 
-  def pad_fn(ts):
-    ts = convert_lines(np.array(ts), 512, tokenizer, prunc='ei')
-    return seq_padding(ts, truncate=False)
+  train_text = convert_lines(train_text, 512, tokenizer, prunc='ei')
   lw = 1 / np.mean(train_weights)
-  train_gen = GeneralDataGenerator(inputs=[train_text], outputs=[train_label, train_aux],
-                                   sample_weights=[train_weights, np.ones_like(train_weights)], batch_size=64,
-                                   pad_fn=[pad_fn])
+  # train_gen = GeneralDataGenerator(inputs=[train_text], outputs=[train_label, train_aux],
+  #                                  sample_weights=[train_weights, np.ones_like(train_weights)], batch_size=64,
+  #                                  pad_fn=[pad_fn])
 
+  train_gen = AllDataGenerator(train_text, train_label, train_aux, train_weights, batch_size=64)
   model = get_bert_multi_model(bert_config)
 
   lr = 2e-5

@@ -10,6 +10,6 @@ def get_inputs(seq_len):
     """
     names = ['Token', 'Segment', 'Masked']
     return [keras.layers.Input(
-        shape=(None,),
+        shape=(seq_len,),
         name='Input-%s' % name,
     ) for name in names]

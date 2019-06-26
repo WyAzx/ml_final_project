@@ -39,11 +39,13 @@ def truncate_ids(text_ids, max_len):
     return text_ids
 
 
-def seq_padding(X, max_len=512, truncate=True):
+def seq_padding(X, max_len=512, truncate=True, fix=False):
     if truncate:
         X = [truncate_ids(x, max_len) for x in X]
     L = [len(x) for x in X]
     ML = max(L)
+    if fix:
+        ML = max_len
     return [x + [0] * (ML - len(x)) for x in X]
 
 
@@ -107,7 +109,7 @@ class AllDataGenerator(object):
                 Y_aux.append(self.y_aux[i])
                 EW.append(self.example_weight[i])
                 if len(X) == self.batch_size or i == idxs[-1]:
-                    X = seq_padding(X, self.max_len)
+                    X = seq_padding(X, self.max_len, fix=True)
                     X = np.array(X)
                     Y = np.array(Y)
                     Y_aux = np.array(Y_aux)
