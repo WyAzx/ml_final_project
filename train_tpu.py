@@ -83,7 +83,7 @@ def train_bert_on_tpu():
   train_gen = AllDataGenerator(train_text, train_label, train_aux, train_weights, batch_size=64)
   model = get_bert_multi_model(bert_config)
 
-  optimizer = keras.optimizers.Adam(2e-5)
+  # optimizer = keras.optimizers.Adam(2e-5)
   # lr = 2e-5
   # weight_decay = 0.01
   # decay_steps = 1 * len(train_gen)
@@ -101,6 +101,17 @@ def train_bert_on_tpu():
   )
 
   with tf.keras.utils.custom_object_scope(get_custom_objects()):
+    lr = 2e-5
+    weight_decay = 0.01
+    decay_steps = 1 * len(train_gen)
+    warmup_steps = int(0.1 * decay_steps)
+
+    optimizer = AdamWarmup(
+      decay_steps=decay_steps,
+      warmup_steps=warmup_steps,
+      lr=lr,
+      weight_decay=weight_decay,
+    )
     tpu_model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
     tpu_model.compile(loss='binary_crossentropy', optimizer=optimizer, loss_weights=[lw, 1.])
 
